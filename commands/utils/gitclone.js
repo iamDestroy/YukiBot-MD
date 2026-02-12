@@ -23,7 +23,7 @@ export default {
         if (!zipName) zipName = `${repo}-${user}.zip`
         zipBuffer = Buffer.from(await zipRes.arrayBuffer())
         repos.push(repoData)
-        image = 'https://raw.githubusercontent.com/The-King-Destroy/Adiciones/main/Contenido/1745610598914.jpeg'
+        image = 'https://cdn.yuki-wabot.my.id/files/MqnN.jpeg'
       } else {
         const res = await fetch(`https://api.github.com/search/repositories?q=${encodeURIComponent(text)}`)
         const json = await res.json()
