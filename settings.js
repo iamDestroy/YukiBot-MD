@@ -9,7 +9,7 @@ global.sessionName = 'Sessions/Owner'
 global.version = '^2.0 - Latest'
 global.dev = "© ⍴᥆ᥕᥱrᥱძ ᑲᥡ ⁱᵃᵐ|𝔇ĕ𝐬†𝓻⊙γ𒆜"
 global.links = {
-api: 'https://api.nightlight.qzz.io',
+api: 'https://api.stellarwa.xyz',
 web: 'http://localhost:5010',
 channel: "https://whatsapp.com/channel/0029Vb64nWqLo4hb8cuxe23n",
 github: "https://github.com/The-King-Destroy/YukiBot-MD",
