@@ -55,7 +55,7 @@ async function getVideoFromApis(url) {
     { api: 'Adonix', endpoint: `${global.APIs.adonix.url}/download/ytvideo?apikey=${global.APIs.adonix.key}&url=${encodeURIComponent(url)}`, extractor: res => res?.data?.url },    
     { api: 'Vreden', endpoint: `${global.APIs.vreden.url}/api/v1/download/youtube/video?url=${encodeURIComponent(url)}&quality=360`, extractor: res => res.result?.download?.url },
     { api: 'Stellar v2', endpoint: `${global.APIs.stellar.url}/dl/ytmp4v2?url=${encodeURIComponent(url)}&key=${global.APIs.stellar.key}`, extractor: res => res.vidinfo?.url },
-    { api: 'Stellar', endpoint: `${global.APIs.stellar.url}/dl/ytmp4?url=${encodeURIComponent(url)}&quality=360&key=${global.APIs.stellar.key}`, extractor: res => res.data?.dl },
+    { api: 'Stellar', endpoint: `${global.APIs.stellar.url}/dl/ytdl?url=${encodeURIComponent(url)}&format=mp4&key=${global.APIs.stellar.key}`, extractor: res => res.result?.download },
     { api: 'Nekolabs', endpoint: `${global.APIs.nekolabs.url}/downloader/youtube/v1?url=${encodeURIComponent(url)}&format=360`, extractor: res => res.result?.downloadUrl },
     { api: 'Vreden v2', endpoint: `${global.APIs.vreden.url}/api/v1/download/play/video?query=${encodeURIComponent(url)}`, extractor: res => res.result?.download?.url }
   ]
