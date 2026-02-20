@@ -146,6 +146,25 @@ cd && cd YukiBot-MD && rm -rf Sessions/Owner && npm start
 ### Patrocinadores del Proyecto
 
 <details>
+<summary><strong>☁️ Stellar</strong> — API</summary>
+
+<div align="center">
+  <a href="https://api.stellarwa.xyz">
+    <img src="https://api.stellarwa.xyz/favicon.ico" alt="Logo" height="125px">
+  </a>
+</div>
+
+### 🐢 Enlaces Principales
+| Servicio | Enlace |
+|------------|-----------|
+| Dashboard | [Abrir](https://api.stellarwa.xyz) |
+| Store | [Abrir](https://api.stellarwa.xyz/store) 
+| Soporte | [Visitar](https://api.stellarwa.xyz/ticket)  
+| Estado de Servicios | [Ver](https://api.stellarwa.xyz/stats) 
+
+</details>
+
+<details>
 <summary><strong>☁️ SkyUltraPlus</strong> — Hosting</summary>
   
 [![YouTube](https://img.shields.io/badge/SkyUltraPlus-Host-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/fZbcCLpSH6Y?si=1sDen7Bzmb7jVpAI)
