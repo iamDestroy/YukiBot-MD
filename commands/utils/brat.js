@@ -29,7 +29,7 @@ export default {
       let texto1 = user.metadatos || `ʏᴜᴋɪ 🧠 Wᴀʙᴏᴛ'ꜱ`
       let texto2 = user.metadatos2 || `@${name}`
       const buffer = await fetchSticker(text)
-      const tmpFile = `./tmp-${Date.now()}.webp`
+      const tmpFile = `./tmp/brat-${Date.now()}.webp`
       await fs.writeFileSync(tmpFile, buffer)
       await client.sendImageAsSticker(m.chat, tmpFile, m, { packname: texto1, author: texto2 })
       await fs.unlinkSync(tmpFile)
