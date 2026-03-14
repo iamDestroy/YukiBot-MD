@@ -18,8 +18,8 @@ export default {
       const mime = (quoted.msg || quoted).mimetype || '';
       let user = global.db.data.users[m.sender];
       const name = user.name;
-      let texto1 = user.metadatos || `ʏᴜᴋɪ 🧠 Wᴀʙᴏᴛ`;
-      let texto2 = user.metadatos2 || `@${name}`;
+      let texto1 = user.metadatos || `Sticker`;
+      let texto2 = user.metadatos2 || `ᴀꜱᴀᴋᴜʀᴀ ᴍᴀᴏ ʙᴏᴛ 👑`;
       let urlArg = null;
       let argsWithoutUrl = [];
       for (let arg of args) {
