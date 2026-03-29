@@ -38,7 +38,7 @@ export default {
         return m.reply(`《✧》 Se encontraron resultados en *${categoria}*, pero ninguno tiene enlace disponible.`)
       }
 
-      const thumb = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/512px-WhatsApp.svg.png'
+      const thumb = 'https://iili.io/qp681b1.jpg'
       const thumbnail = await getBuffer(thumb)
 
       let teks = `➩ *Grupos de WhatsApp encontrados*\n\n`
