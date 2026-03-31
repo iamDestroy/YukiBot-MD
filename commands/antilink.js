@@ -17,7 +17,7 @@ const primaryBotId = chat?.primaryBot
 const isPrimary = !primaryBotId || primaryBotId === botId
 const isGroupLink = linkRegex.test(m.text)
 const hasAllowedLink = allowedLinks.some(link => m.text.includes(link))
-const command = (m.noPrefix?.trim().split(/\s+/)[0] || '').toLowerCase()
+const command = (m.command || '').toLowerCase();
 if (hasAllowedLink || !isGroupLink || !chat?.antilinks || isAdmin || !isBotAdmin || !isPrimary) return
 await client.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.key.id, participant: m.key.participant }})
 if (!(command === 'invite')) {
