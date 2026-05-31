@@ -53,7 +53,7 @@ export default {
   run: async ({ msg, sock, args, usedPrefix, command }) => {
     const chatId = msg.chat;
     const chat = global.db.data.chats[chatId];
-    if (global.db.adminonly || !global.db.economy) {
+    if (chat.adminonly || !chat.economy) {
       return msg.reply(`ꕥ Los comandos de *Economía* están desactivados en este grupo.\n\nUn *administrador* puede activarlos con el comando:\n» *${usedPrefix}economy on*`);
     }
     if (global.math[chatId]?.juegoActivo) {
