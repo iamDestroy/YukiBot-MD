@@ -1,12 +1,21 @@
 import fetch from 'node-fetch';
-import FormData from 'form-data';
 
 async function uploadImage(buffer, mime) {
-  const form = new FormData();
-  form.append('file', buffer, { filename: `upload.${mime.split('/')[1] || 'jpg'}`, contentType: mime });
-  const res = await fetch('https://telegra.ph/upload', { method: 'POST', body: form });
+  const base64Data = buffer.toString('base64');
+  const extension = mime.split('/')[1] || 'jpg';
+  
+  const res = await fetch('https://cdn.adoolab.xyz/api/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filename: `upload.${extension}`,
+      data: base64Data,
+      expiration: 'never'
+    })
+  });
+  
   const json = await res.json();
-  if (json?.[0]?.src) return 'https://telegra.ph' + json[0].src;
+  if (json?.url) return json.url;
   throw new Error('Upload failed');
 }
 
