@@ -247,6 +247,10 @@ export async function startBot() {
       }
     }
     if (isNewLogin) log.info("Nuevo dispositivo detectado");
+    if (receivedPendingNotifications === true) {
+      log.warn("Por favor espere aproximadamente 1 minuto...");
+      sock.ev.flush();
+    }
     if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
       if ([DisconnectReason.loggedOut, DisconnectReason.forbidden, DisconnectReason.multideviceMismatch].includes(reason)) {
@@ -267,6 +271,7 @@ export async function startBot() {
         botReady = false;
         reconexion = 0;
         isRestarting = false;
+        clearSession();
         process.exit(1);
       }
       const delay = Math.min(3000 * reconexion, 30000);
