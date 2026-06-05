@@ -79,7 +79,7 @@ function normalizeJid(raw) {
   return s;
 }
 
-function resolveParticipantJid(p, sock?) {
+function resolveParticipantJid(p, sock) {
   if (!p) return null;
   if (p.phoneNumber) {
     const n = normalizeJid(p.phoneNumber);
@@ -108,7 +108,7 @@ function resolveParticipantJid(p, sock?) {
   return null;
 }
 
-function resolveParticipants(participants, sock?) {
+function resolveParticipants(participants, sock) {
   if (!Array.isArray(participants)) return [];
   return participants.map(p => {
     const realJid = resolveParticipantJid(p, sock);
@@ -134,7 +134,7 @@ function resolveJidSync(raw, sock) {
   return norm;
 }
 
-async function resolveJidAsync(raw, sock, groupJid?) {
+async function resolveJidAsync(raw, sock, groupJid) {
   if (!raw) return null;
   const norm = normalizeJid(raw);
   if (!norm) return null;
@@ -209,14 +209,14 @@ export async function getFile(PATH, saveToFile = false) {
   return { filename, ...type, data, deleteFile: () => filename ? fs.promises.unlink(filename) : Promise.resolve() };
 }
 
-export async function fetchJson(url, options?) {
+export async function fetchJson(url, options) {
   try {
     const res = await axios({ method: 'GET', url, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36' }, ...options });
     return res.data;
   } catch (err) { return err; }
 }
 
-export async function smsg(sock, msg, store?) {
+export async function smsg(sock, msg, store) {
   const botId = sock?.user?.id.split(':')[0] + '@s.whatsapp.net' || '';
   const botSetting = global.db.data.settings[botId] || {};
   if (!sock.decodeJid) {
@@ -452,7 +452,7 @@ export async function smsg(sock, msg, store?) {
   }
   
   if (!sock.sendCodeMessage) {
-  sock.sendCodeMessage = async (jid, filename, code, quoted?, tableData?) => {
+  sock.sendCodeMessage = async (jid, filename, code, quoted, tableData) => {
     const KEYWORDS = new Set(['break','case','catch','class','const','continue','debugger','default','delete','do','else','export','extends','false','finally','for','function','if','import','in','instanceof','let','new','null','return','super','switch','this','throw','true','try','typeof','var','void','while','with','yield','async','await','static']);
     const METHOD_NAMES = new Set(['log','parse','stringify','from','toString','readFileSync','existsSync','statSync','resolve','join','randomUUID','randomBytes','startsWith','replace','trim','isFile','relayMessage','sendMessage']);
     function tokenize(src) {
@@ -502,7 +502,7 @@ export async function smsg(sock, msg, store?) {
   }
 
   if (!sock.reply) {
-  sock.reply = async (jid, text = '', quoted?, options?) => {
+  sock.reply = async (jid, text = '', quoted, options) => {
     return Buffer.isBuffer(text) ? sock.sendFile(jid, text, 'file', '', quoted, false, options) : sock.sendMessage(jid, { ...options, text }, { quoted, ...options });
   };
   }
