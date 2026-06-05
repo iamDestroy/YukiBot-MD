@@ -77,15 +77,11 @@ export const defUser = {
   genre: '',
   birth: '',
   metadatos: null,
-  metadatos2: null,
-  lang: 'ES',
-  banned: 0,
-  bannedReason: ''
+  metadatos2: null
 };
 
 export const defChat = {
   isBanned: 0,
-  isMute: 0,
   welcome: 0,
   goodbye: 0,
   sWelcome: '',
@@ -98,7 +94,6 @@ export const defChat = {
   primaryBot: null,
   antilinks: 1,
   antistatus: 0,
-  antinsfw: 0,
   rolls: '{}'
 };
 
@@ -129,9 +124,7 @@ export const defSets = {
   currency: 'Yenes',
   namebot: 'Yuki',
   botname: 'Yuki Suou',
-  owner: '',
-  botprem: 0,
-  botmod: 0
+  owner: ''
 };
 
 export const defStickerPack = {
