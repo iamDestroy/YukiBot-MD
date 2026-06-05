@@ -13,6 +13,7 @@ import { smsg, getCachedMeta, setCachedMeta } from "#serialize";
 import cmdsLoader from '#system/cmdsLoader';
 import "#system/database";
 import { startSubBot } from './cmds/socket/subs.js';
+import db from '#db';
 
 const log = {
   info: (msg) => console.log(chalk.bgBlue.white.bold(`INFO`), chalk.white(msg)),
@@ -79,6 +80,13 @@ async function loadBots() {
   setTimeout(loadBots, 60 * 1000);
 }
 
+async function initDB() {
+  db.initDB();
+  db.clearDB();
+  global.db = db;
+  console.log(chalk.gray('[ ✿  ]  Base de datos cargada correctamente.'));
+}
+
 function cleanCache() {
   try {
     if (fs.existsSync('./tmp')) {
@@ -137,7 +145,7 @@ let isRestarting = false;
 const retriesLimit = 15;
 async function warmupGroups(sock) {
   try {
-    const allChats = Object.values(global.db.data.chats)
+    const allChats = db.getChat()
     const chatIds = allChats.map(c => c.id).filter(id => typeof id === 'string' && id.endsWith('@g.us')).slice(0, 50)
     if (!chatIds.length) return
     console.log(chalk.gray(`[ ✿ ] Precargando metadata de ${chatIds.length} grupos...`))
@@ -293,8 +301,7 @@ setInterval(cleanCache, 60 * 60 * 1000);
 cleanCache();
 
 (async () => {
-  global.loadDatabase();
-  console.log(chalk.gray('[ ✿  ]  Base de datos JSON cargada correctamente.'));
+  await initDB();
   await cmdsLoader();
   loadBots();
   await startBot();

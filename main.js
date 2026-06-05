@@ -5,20 +5,19 @@ import fs from "fs";
 import path from 'path';
 import gradient from 'gradient-string';
 import { getCachedMeta, setCachedMeta } from '#serialize';
-import { initDB } from '#system/database';
+import db from '#db';
 
 export default async (sock, msg) => {
   if (msg.fromMe && !msg.key.participant && msg.isBot) return;  
   const sender = msg.sender;
   let body = msg.body || '';
-  initDB(msg, sock);
   
   const from = msg.key.remoteJid;
   const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-  const chat = global.db.data.chats[msg.chat];
-  const settings = global.db.data.settings[botJid];
-  const user = global.db.data.users[sender];
-  const users = global.db.data.chats[msg.chat]?.users?.[sender];
+  const chat = db.getChat(msg.chat);
+  const settings = db.getSettings(botJid);
+  const user = db.getUser(sender);
+  const users = db.getChatUser(msg.chat, sender);
   const pushname = msg.pushName || 'Sin nombre';
   const isOwner = global.owner.map(num => num + '@s.whatsapp.net').includes(sender);
   const isROwner = [botJid, ...(settings.owner ? [settings.owner] : []), ...global.owner.map(num => num + '@s.whatsapp.net')].includes(sender);
@@ -46,7 +45,7 @@ export default async (sock, msg) => {
   if (!users.stats) users.stats = {};
   if (!users.stats[today]) users.stats[today] = { msgs: 0, cmds: 0 };
   users.stats[today].msgs++;
-  global.db.data.chats[from].users[sender].stats = users.stats;
+  db.setChatUser(from, sender, 'stats', users.stats);
 
   const rawBotname = settings.namebot || 'Yuki';
   const tipo = settings.type || 'Sub';
@@ -96,7 +95,7 @@ export default async (sock, msg) => {
   let text = args.join(' ');
   if (!command) return;
 
-  const chatData = global.db.data.chats[from];
+  const chatData = db.getChat(from);
   const consolePrimary = chatData.primaryBot;
   if (!consolePrimary || consolePrimary === botJid) {
     const gLugar = msg.isGroup ? '│' + chalk.bold.green(' Grupo') + ': ' + gradient('green', 'lime')(groupName) : '│' + chalk.bold.green(' Privado') + ': ' + gradient('pink', 'magenta')('Chat Privado');
@@ -167,17 +166,17 @@ export default async (sock, msg) => {
     user.usedcommands = (user.usedcommands || 0) + 1;
     user.exp = (user.exp || 0) + Math.floor(Math.random() * 100);
     user.name = msg.pushName;
-    global.db.data.users[sender].usedcommands = user.usedcommands;
-    global.db.data.users[sender].exp = user.exp;
-    global.db.data.users[sender].name = user.name;
+    db.setUser(sender, 'usedcommands', user.usedcommands);
+    db.setUser(sender, 'exp', user.exp);
+    db.setUser(sender, 'name', user.name);
     users.usedTime = new Date();
     users.lastCmd = Date.now();
     users.stats[today].cmds++;
-    global.db.data.chats[msg.chat].users[sender].usedTime = users.usedTime;
-    global.db.data.chats[msg.chat].users[sender].lastCmd = users.lastCmd;
-    global.db.data.chats[msg.chat].users[sender].stats = users.stats;
+    db.setChatUser(msg.chat, sender, 'usedTime', users.usedTime);
+    db.setChatUser(msg.chat, sender, 'lastCmd', users.lastCmd);
+    db.setChatUser(msg.chat, sender, 'stats', users.stats);
     settings.commandsejecut = (settings.commandsejecut || 0) + 1;
-    global.db.data.settings[botJid].commandsejecut = settings.commandsejecut;
+    db.setSettings(botJid, 'commandsejecut', settings.commandsejecut);
     await cmdData.run({ msg, sock, args, usedPrefix, command, text, groupMetadata, participants, isAdmins, isBotAdmins, isOwner, __dirname: global.plugins[cmdData.pluginKey]?.dirname });
   } catch (error) {
     await sock.sendMessage(msg.chat, { text: `《✧》 Error al ejecutar el comando ${command}.\n\n${error}` }, { quoted: msg });

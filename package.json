@@ -13,7 +13,8 @@
     "#main": "./main.js",
     "#core/*": "./core/*.js",
     "#system/*": "./core/system/*.js",
-    "#events": "./cmds/events.js"
+    "#events": "./cmds/events.js",
+    "#db": "./core/system/database.js"
   },
   "keywords": [
     "whatsapp-bot",
@@ -22,6 +23,10 @@
   ],
   "author": "iamDestroy",
   "license": "MIT",
+  "engines": {
+    "node": ">=22.13.0",
+    "npm": ">=10.9.4"
+  },
   "dependencies": {
     "@vitalets/google-translate-api": "latest",
     "aptoide-scraper": "github:DIEGO-OFC/dv-aptoide-scraper",
