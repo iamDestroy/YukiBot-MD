@@ -7,6 +7,7 @@ import path from 'path';
 import exif from './exif.js';
 import { fileURLToPath } from 'url';
 import GraphemeSplitter from 'grapheme-splitter';
+import db from '#db';
 
 const splitter = new GraphemeSplitter();
 const __filename = fileURLToPath(import.meta.url);
@@ -218,7 +219,7 @@ export async function fetchJson(url, options) {
 
 export async function smsg(sock, msg, store) {
   const botId = sock?.user?.id.split(':')[0] + '@s.whatsapp.net' || '';
-  const botSetting = global.db.data.settings[botId] || {};
+  const botSetting = db.getSettings(botId);
   if (!sock.decodeJid) {
     sock.decodeJid = (jid) => {
       if (!jid) return jid;
