@@ -57,13 +57,13 @@ const cmd = {
       } catch {}
 
       if (!isYTUrl(url)) {
-        return msg.reply('《✧》No encontré un video válido de YouTube.')
+        return msg.reply('《✧》No se encontro un video válido de YouTube.')
       }
 
       let video = null
 
       try {
-        video = await getVideoFromYtdown(url)
+        video = await getVideoFromYoutubei(url)
       } catch (e) {
         return msg.reply(`《✧》No se pudo descargar el *video*, intenta más tarde.\n> ${e.message}`)
       }
@@ -118,22 +118,16 @@ const cmd = {
 
 export default cmd
 
-const download_quality = '720p'
+const download_quality = '360p'
 const max_video_size = 68 * 1024 * 1024
 
-const config = {
-  timeout: 45000,
-  poll_attempts: 30,
-  poll_delay: 1500
-}
-
-const endpoints = {
-  proxy: 'https://app.ytdown.to/proxy.php'
-}
-
-const page = {
-  origin: 'https://app.ytdown.to',
-  referer: 'https://app.ytdown.to/es29/'
+const youtubei = {
+  endpoint: 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false',
+  visitor_id:
+    'Cgs4ZmxfcDk4Vnk0VSjLvdrQBjIKCgJJRBIEGgAgXmLfAgrcAjE4LllUPWNsWWh5eHVVeE04N1AzV0tnZzZJeFpkV3lGOEVRNnJaei1DQ3hRTkdHV1NFcjg1MmpVQmZ6UzMtOE5zTVVSZ3EzbHFXUHFRZERyV0M3a2g2TlFEdUZybmJRbjkyc1JGVGxVd3MyZG5RMmFmVG95TlJnTXJReTdMNlRTOEVqcTFhaW5OQnJhOU9uRnJRa01IOGpVTzdiR3UwQVpqdjI0UURqNkdmeE1VcWVZc184cGxfOUNNVExVRG9HQ09sa1NPOUVHZG5CcWdUVzVRZ080OGRyQWxDeVRHUF9MRnhBNjVYZVVRR1FBeGxmU0ZSckhhRHI0cDROLWV2cmp0VDdEc3pKU3Q1clhSYkNmWWQ0YjJqbFN5NVh0ejMyajk5NWdkSGhLU1htcTcydHNGeDNUOW5xZXQ3UlZvV2JNbmNGWDBKTldqbXZyQzg0VHhqY1hCVFlnQ2dLQQ==',
+  client_name: 'ANDROID_VR',
+  client_version: '1.65.10',
+  itag: 18
 }
 
 const defaults = {
@@ -142,21 +136,6 @@ const defaults = {
 }
 
 const headers = {
-  proxy() {
-    return {
-      accept: '*/*',
-      'accept-language': 'es-US,es-419;q=0.9,es;q=0.8',
-      'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      origin: page.origin,
-      referer: page.referer,
-      'sec-fetch-dest': 'empty',
-      'sec-fetch-mode': 'cors',
-      'sec-fetch-site': 'same-origin',
-      'user-agent': defaults.user_agent,
-      'x-requested-with': 'XMLHttpRequest'
-    }
-  },
-
   image() {
     return {
       accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
@@ -165,266 +144,35 @@ const headers = {
   }
 }
 
-class Ytdown {
-  constructor(options = {}) {
-    this.url = options.url || ''
-    this.quality = this.normalizeQuality(options.quality || download_quality)
-    this.timeout = Number(options.timeout || config.timeout)
-    this.poll_attempts = Number(options.poll_attempts || config.poll_attempts)
-    this.poll_delay = Number(options.poll_delay || config.poll_delay)
-  }
-
-  sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms))
-  }
-
-  normalizeQuality(quality) {
-    const value = String(quality || '').toLowerCase().trim()
-    return value.endsWith('p') ? value : `${value}p`
-  }
-
-  extractVideoId(input) {
-    const text = String(input || '').trim()
-
-    if (/^[a-zA-Z0-9_-]{11}$/.test(text)) {
-      return text
-    }
-
-    try {
-      const url = new URL(text)
-      const host = url.hostname.replace(/^www\./, '')
-
-      if (host === 'youtu.be') {
-        const id = url.pathname.split('/').filter(Boolean)[0]
-
-        if (/^[a-zA-Z0-9_-]{11}$/.test(id)) {
-          return id
-        }
-      }
-
-      if (host.endsWith('youtube.com')) {
-        const id = url.searchParams.get('v')
-
-        if (/^[a-zA-Z0-9_-]{11}$/.test(id || '')) {
-          return id
-        }
-
-        const match = url.pathname.match(/\/(shorts|embed|live|v)\/([a-zA-Z0-9_-]{11})/)
-
-        if (match) {
-          return match[2]
-        }
-      }
-    } catch {}
-
-    const match = text.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/|\/v\/)([a-zA-Z0-9_-]{11})/)
-
-    return match?.[1] || null
-  }
-
-  normalizeUrl(input) {
-    const video_id = this.extractVideoId(input)
-
-    if (!video_id) {
-      throw new Error('No se encontró un video_id válido')
-    }
-
-    return `https://youtu.be/${video_id}`
-  }
-
-  async fetchTimeout(url, options = {}) {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), this.timeout)
-
-    try {
-      return await fetch(url, {
-        ...options,
-        signal: controller.signal
-      })
-    } finally {
-      clearTimeout(timer)
-    }
-  }
-
-  async parseJson(response) {
-    const text = await response.text()
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${text.slice(0, 300)}`)
-    }
-
-    try {
-      return JSON.parse(text)
-    } catch {
-      throw new Error(`Respuesta JSON inválida: ${text.slice(0, 300)}`)
-    }
-  }
-
-  async request(url) {
-    const body = new URLSearchParams({ url })
-
-    const response = await this.fetchTimeout(endpoints.proxy, {
-      method: 'POST',
-      headers: headers.proxy(),
-      body
-    })
-
-    return await this.parseJson(response)
-  }
-
-  getApi(json) {
-    if (!json?.api) {
-      throw new Error('La respuesta no contiene api')
-    }
-
-    return json.api
-  }
-
-  findQuality(items = []) {
-    const videos = items.filter(item => String(item?.type || '').toLowerCase() === 'video')
-
-    const selected = videos.find(item => {
-      const media_url = String(item?.mediaUrl || '').toLowerCase()
-      const media_res = String(item?.mediaRes || '').toLowerCase()
-      const media_quality = String(item?.mediaQuality || '').toLowerCase()
-
-      return (
-        media_url.endsWith(`/${this.quality}`) ||
-        media_res.endsWith(`x${this.quality.replace('p', '')}`) ||
-        media_quality === this.quality
-      )
-    })
-
-    if (!selected) {
-      const available = videos.map(item => ({
-        quality: String(item?.mediaUrl || '').split('/').pop() || null,
-        resolution: item?.mediaRes || null,
-        size: item?.mediaFileSize || null
-      }))
-
-      throw new Error(`No se encontró la calidad ${this.quality}. Disponibles: ${JSON.stringify(available)}`)
-    }
-
-    return selected
-  }
-
-  async info(input = this.url) {
-    const source = this.normalizeUrl(input)
-    const json = await this.request(source)
-    const api = this.getApi(json)
-
-    if (api.status !== 'ok') {
-      throw new Error(api.message || `Estado inválido: ${api.status}`)
-    }
-
-    const media = this.findQuality(api.mediaItems)
-
-    return {
-      source,
-      video_id: api.id || this.extractVideoId(source),
-      title: api.title || null,
-      thumbnail: api.imagePreviewUrl || media.mediaThumbnail || null,
-      duration: media.mediaDuration || null,
-      channel: api.userInfo?.name || null,
-      quality: this.quality,
-      media
-    }
-  }
-
-  async resolve(media_url) {
-    let last = null
-
-    for (let i = 0; i < this.poll_attempts; i++) {
-      const json = await this.request(media_url)
-      const api = this.getApi(json)
-
-      last = api
-
-      if (api.status === 'completed' && api.fileUrl && /^https?:\/\//i.test(api.fileUrl)) {
-        const size_bytes =
-          parseFileSize(api.fileSizeBytes) ||
-          parseFileSize(api.fileSize) ||
-          parseFileSize(api.estimatedFileSize)
-
-        return {
-          file_name: api.fileName || null,
-          file_size: api.fileSize || api.estimatedFileSize || (size_bytes ? formatBytes(size_bytes) : null),
-          file_size_bytes: size_bytes,
-          download: api.fileUrl,
-          view: api.viewUrl || null,
-          progress: api.progress || api.percent || 'Completed'
-        }
-      }
-
-      if (api.status === 'failed' || api.status === 'error') {
-        throw new Error(api.message || 'La conversión falló')
-      }
-
-      await this.sleep(this.poll_delay)
-    }
-
-    throw new Error(`Tiempo agotado esperando descarga. Último estado: ${JSON.stringify(last)}`)
-  }
-
-  async run(input = this.url) {
-    try {
-      const data = await this.info(input)
-      const file = await this.resolve(data.media.mediaUrl)
-
-      const size_bytes =
-        file.file_size_bytes ||
-        parseFileSize(file.file_size) ||
-        parseFileSize(data.media.mediaFileSize)
-
-      const format = String(data.media.mediaExtension || 'mp4').replace(/^\./, '').toLowerCase()
-
-      return {
-        status: true,
-        result: {
-          source: data.source,
-          video_id: data.video_id,
-          title: data.title,
-          channel: data.channel,
-          thumbnail: data.thumbnail,
-          duration: data.duration,
-          quality: data.quality,
-          format,
-          size: file.file_size || data.media.mediaFileSize || (size_bytes ? formatBytes(size_bytes) : null),
-          size_bytes,
-          filename: file.file_name || data.title,
-          download: file.download,
-          view: file.view
-        }
-      }
-    } catch (error) {
-      return {
-        status: false,
-        error: error.message
-      }
-    }
-  }
-}
-
 const isYTUrl = (url = '') =>
   /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i.test(url)
 
 const getVideoId = (text = '') => {
-  const match = String(text).match(
-    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
-  )
+  const raw = String(text || '').trim()
 
-  return match?.[1] || null
-}
+  if (/^[a-zA-Z0-9_-]{11}$/.test(raw)) {
+    return raw
+  }
 
-const sanitizeFileName = (name = 'video') =>
-  cleanExtension(name)
-    .replace(/[\\/:*?"<>|]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 120) || 'video'
+  const patterns = [
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/live\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+    /[?&]v=([a-zA-Z0-9_-]{11})/
+  ]
 
-function cleanExtension(name = 'video') {
-  return String(name || 'video').replace(/\.(mp4|mkv|webm|mov|avi)$/i, '')
+  for (const pattern of patterns) {
+    const match = raw.match(pattern)
+
+    if (match?.[1]) {
+      return match[1]
+    }
+  }
+
+  return null
 }
 
 async function getVideoInfo(input, video_id) {
@@ -448,33 +196,99 @@ async function getVideoInfo(input, video_id) {
   return video || null
 }
 
-async function getVideoFromYtdown(url) {
-  const client = new Ytdown({
-    url,
-    quality: download_quality
+async function getVideoFromYoutubei(url) {
+  const video_id = getVideoId(url)
+
+  if (!video_id) {
+    throw new Error('No se encontró un video_id válido')
+  }
+
+  const response = await fetch(youtubei.endpoint, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'X-Goog-Visitor-Id': youtubei.visitor_id
+    },
+    body: JSON.stringify({
+      context: {
+        client: {
+          clientName: youtubei.client_name,
+          clientVersion: youtubei.client_version
+        }
+      },
+      videoId: video_id
+    })
   })
 
-  const res = await client.run()
+  const text = await response.text()
 
-  if (!res?.status || !res?.result?.download) {
-    throw new Error(res?.error || 'API sin resultado válido')
+  if (!response.ok) {
+    throw new Error(`YouTube player HTTP ${response.status}: ${text.slice(0, 300)}`)
   }
+
+  let json = null
+
+  try {
+    json = JSON.parse(text)
+  } catch {
+    throw new Error(`Respuesta JSON inválida: ${text.slice(0, 300)}`)
+  }
+
+  const formats = json?.streamingData?.formats || []
+  const stream = formats.find(item => Number(item?.itag) === youtubei.itag && item?.url)
+
+  if (!stream?.url) {
+    const status = json?.playabilityStatus?.status || 'UNKNOWN'
+    const reason = json?.playabilityStatus?.reason || 'Sin razón'
+    throw new Error(`No se encontró URL directa con itag ${youtubei.itag}. Estado: ${status}. ${reason}`)
+  }
+
+  const size_bytes =
+    parseFileSize(stream.contentLength) ||
+    await getRemoteFileSize(stream.url).catch(() => null)
 
   return {
-    url: res.result.download,
-    title: res.result.title || null,
-    channel: res.result.channel || null,
-    thumbnail: res.result.thumbnail || null,
-    duration: res.result.duration || null,
-    video_id: res.result.video_id || null,
-    filename: res.result.filename || res.result.title || null,
-    quality: res.result.quality || download_quality,
-    format: res.result.format || 'mp4',
-    size: res.result.size || null,
-    size_bytes: res.result.size_bytes || null,
-    source: res.result.source || url,
-    view: res.result.view || null
+    url: stream.url,
+    title: json?.videoDetails?.title || null,
+    channel: json?.videoDetails?.author || null,
+    thumbnail: makeYoutubeThumbnail(video_id),
+    duration: json?.videoDetails?.lengthSeconds
+      ? formatDuration(Number(json.videoDetails.lengthSeconds))
+      : null,
+    video_id,
+    filename: json?.videoDetails?.title || video_id,
+    quality: stream.qualityLabel || download_quality,
+    format: 'mp4',
+    size: size_bytes ? formatBytes(size_bytes) : null,
+    size_bytes,
+    source: `https://youtu.be/${video_id}`,
+    view: null
   }
+}
+
+async function getRemoteFileSize(url) {
+  const response = await fetch(url, {
+    method: 'HEAD',
+    headers: {
+      'user-agent': defaults.user_agent
+    }
+  })
+
+  const length = response.headers.get('content-length')
+  const bytes = Number(length)
+
+  return Number.isFinite(bytes) && bytes > 0 ? bytes : null
+}
+
+const sanitizeFileName = (name = 'video') =>
+  cleanExtension(name)
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120) || 'video'
+
+function cleanExtension(name = 'video') {
+  return String(name || 'video').replace(/\.(mp4|mkv|webm|mov|avi)$/i, '')
 }
 
 async function makeJpegThumbnail(thumbnail, video_id) {
@@ -590,4 +404,18 @@ function formatBytes(bytes = 0) {
   }
 
   return `${size.toFixed(unit === 0 ? 0 : 2)} ${units[unit]}`
+}
+
+function formatDuration(seconds = 0) {
+  seconds = Math.floor(Number(seconds) || 0)
+
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  }
+
+  return `${m}:${String(s).padStart(2, '0')}`
 }
