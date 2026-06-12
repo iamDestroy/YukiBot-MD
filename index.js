@@ -168,7 +168,7 @@ export async function startBot() {
   if (isRestarting) return;
   isRestarting = true;
   bootTime = Date.now();
-  const { state, saveCreds: saveCredsDB, close } = await useMultiFileAuthState('./Sessions/Owner');
+  const { state, saveCreds: saveCredsDB } = await useMultiFileAuthState('./Sessions/Owner');
   const { version } = await fetchLatestBaileysVersion();
   let saveCredsTimer = null;
   const saveCreds = () => { clearTimeout(saveCredsTimer); saveCredsTimer = setTimeout(saveCredsDB, 2000); };
