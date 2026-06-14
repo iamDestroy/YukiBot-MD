@@ -26,17 +26,41 @@ const cmd = {
       const views = Number(data.vistas || 0).toLocaleString('es-HN')
       const thumbnail = data.miniatura || null
       const download = data.descarga
-      const size_bytes = parseFileSize(download.tamaño)
-      const send_as_document = size_bytes ? size_bytes > max_video_size : false
+      const quality = download.calidad || '360p'
       const file_name = sanitizeFileName(title) + '.mp4'
 
-      const caption = `乂 *Video descargado*
+      const size_bytes =
+        parseFileSize(download.tamaño) ||
+        await getRemoteFileSize(download.url).catch(() => null)
+
+      const size_text = size_bytes
+        ? formatBytes(size_bytes)
+        : download.tamaño || 'Desconocido'
+
+      const send_as_document = size_bytes ? size_bytes > max_video_size : false
+
+      const info_message = `➩ Descargando › *${title}*
 
 > ❖ Canal › *${channel}*
 > ⴵ Duración › *${duration}*
 > ❀ Vistas › *${views}*
-> ❒ Calidad › *${download.calidad || '360p'}*
-> ❒ Tamaño › *${download.tamaño || 'Desconocido'}*`
+> ❒ Calidad › *${quality}*
+> ❒ Tamaño › *${size_text}*
+> ❒ Enlace › *${url}*`
+
+      if (thumbnail) {
+        await sock.sendMessage(msg.chat, {
+          image: { url: thumbnail },
+          caption: info_message
+        }, { quoted: msg })
+      } else {
+        await msg.reply(info_message)
+      }
+
+      const caption = `乂 *Video descargado*
+
+> ❒ Calidad › *${quality}*
+> ❒ Tamaño › *${size_text}*`
 
       if (send_as_document) {
         await sock.sendMessage(msg.chat, {
@@ -114,8 +138,50 @@ async function getFareVideo(url) {
   }
 }
 
+async function getRemoteFileSize(url) {
+  const head = await fetch(url, {
+    method: 'HEAD',
+    headers: {
+      'user-agent': 'Mozilla/5.0'
+    }
+  }).catch(() => null)
+
+  let length = head?.headers?.get('content-length')
+  let bytes = Number(length)
+
+  if (Number.isFinite(bytes) && bytes > 0) {
+    return bytes
+  }
+
+  const range = await fetch(url, {
+    method: 'GET',
+    headers: {
+      range: 'bytes=0-0',
+      'user-agent': 'Mozilla/5.0'
+    }
+  }).catch(() => null)
+
+  const content_range = range?.headers?.get('content-range')
+  const match = content_range?.match(/\/(\d+)$/)
+
+  if (match?.[1]) {
+    bytes = Number(match[1])
+    if (Number.isFinite(bytes) && bytes > 0) return bytes
+  }
+
+  length = range?.headers?.get('content-length')
+  bytes = Number(length)
+
+  return Number.isFinite(bytes) && bytes > 0 ? bytes : null
+}
+
 async function getThumbnail(url) {
-  const res = await fetch(url)
+  const res = await fetch(url, {
+    headers: {
+      'user-agent': 'Mozilla/5.0'
+    }
+  })
+
   if (!res.ok) return null
 
   const buffer = Buffer.from(await res.arrayBuffer())
@@ -147,14 +213,51 @@ function sanitizeFileName(name = 'video') {
 function parseFileSize(size) {
   if (!size) return null
 
-  const match = String(size).match(/([\d.,]+)\s*(b|kb|mb|gb)/i)
+  const raw = String(size).trim()
+  const match = raw.match(/([\d.,]+)\s*(bytes?|b|kb|kib|mb|mib|gb|gib)/i)
+
   if (!match) return null
 
-  const value = Number(match[1].replace(',', '.'))
-  if (!Number.isFinite(value)) return null
+  let value_text = match[1]
+
+  if (value_text.includes(',') && value_text.includes('.')) {
+    value_text = value_text.replace(/,/g, '')
+  } else {
+    value_text = value_text.replace(',', '.')
+  }
+
+  const value = Number(value_text)
+
+  if (!Number.isFinite(value) || value <= 0) return null
 
   const unit = match[2].toLowerCase()
-  const mult = { b: 1, kb: 1024, mb: 1024 ** 2, gb: 1024 ** 3 }
 
-  return Math.round(value * mult[unit])
+  const mult = {
+    b: 1,
+    byte: 1,
+    bytes: 1,
+    kb: 1024,
+    kib: 1024,
+    mb: 1024 ** 2,
+    mib: 1024 ** 2,
+    gb: 1024 ** 3,
+    gib: 1024 ** 3
+  }
+
+  return Math.round(value * (mult[unit] || 1))
+}
+
+function formatBytes(bytes = 0) {
+  if (!bytes || Number.isNaN(bytes)) return 'Desconocido'
+
+  const units = ['B', 'KB', 'MB', 'GB']
+  let size = Number(bytes)
+  let unit = 0
+
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024
+    unit++
+  }
+
+  return `${size.toFixed(unit === 0 ? 0 : 2)} ${units[unit]}`
 }
