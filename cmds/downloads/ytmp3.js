@@ -67,7 +67,7 @@ const cmd = {
       }, { quoted: msg })
     } catch (e) {
       await msg.reply(
-        `> Ocurrió un error inesperado al ejecutar *${usedPrefix + command}*.\n> [Error: *${e.message}*]`
+        `> An unexpected error occurred while executing command *${usedPrefix + command}*.\n> [Error: *${e.message}*]`
       )
     }
   }
