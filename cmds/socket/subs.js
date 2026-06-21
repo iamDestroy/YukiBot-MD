@@ -16,6 +16,12 @@ let commandFlags = {};
 const cleanJid = (jid = '') => jid.replace(/:\d+/, '').split('@')[0];
 const msgRetryCounterCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 const userDevicesCache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 });
+const sessionsPath = path.resolve(process.cwd(), 'Sessions');
+const subsPath = path.join(sessionsPath, 'Subs');
+
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
 
 function getClient(client) {
   const userId = client?.user?.id?.split(':')[0];
@@ -34,8 +40,10 @@ function normalizePhone(input) {
 }
 
 export async function startSubBot(msg, client, caption = '', isCode = false, phone = '', chatId = '', isCommand = false) {
-  const id = phone || (msg?.sender || '').split('@')[0];
-  const sessionFolder = `./Sessions/Subs/${id}`;
+  const id = normalizePhone(phone || (msg?.sender || '').split('@')[0]);
+  if (!id) throw new Error('No se pudo obtener el número del Sub-Bot.');
+  ensureDir(subsPath);
+  const sessionFolder = path.join(subsPath, id);
   const senderId = msg?.sender;
   const { state, saveCreds: saveCredsDB } = await useMultiFileAuthState(sessionFolder);
   const { version } = await fetchLatestBaileysVersion();
@@ -178,17 +186,17 @@ export default {
   command: ['code', 'qr'],
   category: 'socket',
   description: 'Gestionar bots subbots.',
-  run: async ({ msg, sock, args, command, __dirname }) => {
+  run: async ({ msg, sock, args, command }) => {
     db.setCreate('users', msg.sender, 'Subs', 0);
     const user = db.getUser(msg.sender);
     if (Date.now() - user.Subs < 80000) {
       const remainingTime = (user.Subs + 80000) - Date.now();
       return sock.reply(msg.chat, `ꕥ Debes esperar *${msToTime(remainingTime)}* para volver a intentar vincular un socket.`, msg);
     }
-    const subsPath = path.join(__dirname, '../../Sessions/Subs');
-    const allSubs = fs.existsSync(subsPath)
-      ? fs.readdirSync(subsPath).filter((dir) => fs.existsSync(path.join(subsPath, dir, 'creds.json')))
-      : [];
+    ensureDir(subsPath);
+    const allSubs = fs.readdirSync(subsPath, { withFileTypes: true })
+      .filter((dir) => dir.isDirectory() && fs.existsSync(path.join(subsPath, dir.name, 'creds.json')))
+      .map((dir) => dir.name);
     const activeSubNumbers = new Set();
     if (global.conns && Array.isArray(global.conns)) {
       for (const conn of global.conns) {
