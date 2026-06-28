@@ -83,7 +83,7 @@ export default async (sock, msg) => {
     for (const p of (global.cmdsExecute ?? [])) {
       if (p.type !== 'before') continue;
       try {
-        if (await p.fn({ msg, sock, match, groupMetadata, participants, isAdmins, isBotAdmins, isOwner, isModeration, __dirname: p.dirname })) continue;
+        if (await p.fn({ msg, sock, match, groupMetadata, participants, isAdmins, isBotAdmins, isOwner, __dirname: p.dirname })) continue;
       } catch (e) {
         console.error(chalk.gray(`[ ✿ ] Error before-plugin ${p.key}: ${e.message}`));
       }
