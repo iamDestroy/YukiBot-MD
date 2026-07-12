@@ -118,7 +118,7 @@ async function getVideoInfo(input, video_id) {
 }
 
 async function getAudioFromApi(url) {
-  const api_url = `https://fare.ink/dl/yta?url=${encodeURIComponent(url)}`
+  const api_url = `https://api.lempi.lat/dl/yta?url=${encodeURIComponent(url)}&apikey=montekey28`
   
   const res = await fetch(api_url, {
     headers: { 'accept': 'application/json' }
