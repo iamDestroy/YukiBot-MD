@@ -1,5 +1,5 @@
 > [!NOTE]
-> **Este proyecto está en constante evolución. Estamos comprometidos en ofrecer a nuestra comunidad un Bot increíble. Te invitamos a instalarlo y para estar al tanto de todas las novedades. [¡Únete a nuestro nuevo canal!](https://stellarwa.xyz/channel/yuki)**
+> **Este proyecto está en constante evolución. Estamos comprometidos en ofrecer a nuestra comunidad un Bot increíble. Te invitamos a instalarlo y para estar al tanto de todas las novedades. [¡Únete a nuestro nuevo canal!](https://whatsapp.com/channel/0029Vb64nWqLo4hb8cuxe23n)**
 
 <p align="center"> 
 <img src="https://iili.io/qpPn1K7.gif" alt="YukiBot-MD" style="width: 75%; height: auto; max-width: 100px;">
@@ -153,27 +153,27 @@ cd && cd YukiBot-MD && rm -rf Sessions/Owner && npm start
 | Store | [Abrir](https://api.yuki-wabot.my.id/store) 
 | Soporte | [Visitar](https://api.yuki-wabot.my.id/ticket)  
 | Estado de Servicios | [Ver](https://api.yuki-wabot.my.id/stats) |
-| Canal | [Abrir](https://stellarwa.xyz/channel/yuki) 
+| Canal | [Abrir](https://whatsapp.com/channel/0029Vb64nWqLo4hb8cuxe23n) 
 
 </details>
 
 <details>
-<summary><strong>☁️ Stellar</strong> — API</summary>
+<summary><strong>☁️ Evogb</strong> — API</summary>
 
 <div align="center">
-  <a href="https://api.stellarwa.xyz">
-    <img src="https://api.stellarwa.xyz/favicon.ico" alt="Logo" height="125px">
+  <a href="https://api.evogb.org">
+    <img src="https://api.evogb.org/favicon.ico" alt="Logo" height="125px">
   </a>
 </div>
 
 ### 🐢 Enlaces Principales
 | Servicio | Enlace |
 |------------|-----------|
-| Dashboard | [Abrir](https://api.stellarwa.xyz) |
-| Store | [Abrir](https://api.stellarwa.xyz/store) 
-| Soporte | [Visitar](https://api.stellarwa.xyz/ticket)  
-| Estado de Servicios | [Ver](https://api.stellarwa.xyz/stats) |
-| Canal | [Abrir](https://stellarwa.xyz/channel/api) 
+| Dashboard | [Abrir](https://api.evogb.org) |
+| Store | [Abrir](https://api.evogb.org/store) 
+| Soporte | [Visitar](https://api.evogb.org/ticket)  
+| Estado de Servicios | [Ver](https://api.evogb.org/stats) |
+| Canal | [Abrir](https://whatsapp.com/channel/0029Vb6mZ5TIt5s4mgJuim34) 
 
 </details>
 
@@ -194,31 +194,6 @@ cd && cd YukiBot-MD && rm -rf Sessions/Owner && npm start
 | Panel | [Abrir](https://console.akirax.net) | 
 | Soporte (Matías) | [Contactar](https://wa.me/5491164123932) |
 | Canal de WhatsApp | [Unirse](https://whatsapp.com/channel/0029VaYTBn3DZ4LaHbgzxw0B) |
-
-</details>
-
-<details>
-<summary><strong>☁️ SkyUltraPlus</strong> — Hosting</summary>
-  
-[![YouTube](https://img.shields.io/badge/SkyUltraPlus-Host-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/fZbcCLpSH6Y?si=1sDen7Bzmb7jVpAI)
-
-<div align="center">
-  <a href="https://skyultraplus.com">
-    <img src="https://stellar.evogb.org/evogb/skyultraplus%20(1).png" alt="Logo" height="125px">
-  </a>
-</div>
-
-### 🌱 Enlaces Principales
-| Servicio | Enlace |
-|------------|-----------|
-| Sitio Web | [Visitar](https://skyultraplus.com) |
-| Dashboard | [Abrir](https://dash.skyultraplus.com) |
-| Panel | [Abrir](https://panel.skyultraplus.com) |
-| Canal de WhatsApp | [Unirse](https://whatsapp.com/channel/0029VakUvreFHWpyWUr4Jr0g) |
-| Comunidad (WhatsApp) | [Unirse](https://chat.whatsapp.com/E6iWpvGuJ8zJNPbN3zOr0D?mode=ems_copy_c) |
-| Soporte (Gata Dios) | [Contactar](https://wa.me/message/AIZ7TVNEI7M2P1) |
-| Soporte (Russell) | [Contactar](https://api.whatsapp.com/send/?phone=15167096032&text&type=phone_number&app_absent=0) |
-| Discord | [Unirse](https://discord.gg/XvvmFuDcEE) |
 
 </details>
 
