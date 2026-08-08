@@ -148,6 +148,7 @@ function remove(sock) {
   try { sock.ev.removeAllListeners(); } catch {}
   try { sock.ws?.close(); } catch {}
   try { sock.end?.(new Error('replaced')); } catch {}
+  try { sock.msgRetryCounterCache?.close(); } catch {}
 }
 
 const logger = pino({ level: "silent" });
@@ -193,6 +194,7 @@ export async function startBot() {
   const version = await getVersion();
   let saveCredsTimer = null;
   const saveCreds = () => { clearTimeout(saveCredsTimer); saveCredsTimer = setTimeout(saveCredsDB, 2000); };
+  const msgRetryCounterCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, useClones: false });
   console.info = () => {};
   console.debug = () => {};
   const sock = makeWASocket({
@@ -211,11 +213,14 @@ export async function startBot() {
     connectTimeoutMs: 20000,
     transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
     emitOwnEvents: false,
+    msgRetryCounterCache,
+    cachedGroupMetadata: async (jid) => getCachedMeta(jid) ?? undefined,
     getMessage: async (key) => msgStore.get(key.remoteJid + ':' + key.id),
   });
 
   global.sock = sock;
   patchGroupMetadata(sock);
+  sock.msgRetryCounterCache = msgRetryCounterCache;
   sock.ev.on("creds.update", saveCreds);
   sock.sendText = (jid, text, quoted = "", options) => sock.sendMessage(jid, { text, ...options }, { quoted });
   sock.decodeJid = (jid) => {
@@ -285,10 +290,6 @@ export async function startBot() {
       }
     }
     if (isNewLogin) log.info("Nuevo dispositivo detectado");
-    if (receivedPendingNotifications === true) {
-      log.warn("Por favor espere aproximadamente 1 minuto...");
-      sock.ev.flush();
-    }
     if (connection === "close") {
       remove(sock);
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
