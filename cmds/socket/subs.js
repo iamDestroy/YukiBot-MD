@@ -7,15 +7,13 @@ import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
-import { smsg, patchGroupMetadata } from '#serialize';
+import { smsg, patchGroupMetadata, getCachedMeta } from '#serialize';
 import db from '#db';
 
 if (!global.conns) global.conns = [];
 let reintentos = {};
 let commandFlags = {};
 const cleanJid = (jid = '') => jid.replace(/:\d+/, '').split('@')[0];
-const msgRetryCounterCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
-const userDevicesCache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 });
 const sessionsPath = path.resolve(process.cwd(), 'Sessions');
 const subsPath = path.join(sessionsPath, 'Subs');
 
@@ -27,6 +25,14 @@ function getClient(client) {
   const userId = client?.user?.id?.split(':')[0];
   if (!userId) return client;
   return global.conns?.find((c) => c?.user?.id?.split(':')[0] === userId) || client;
+}
+
+export function remove(sock) {
+  if (!sock) return;
+  try { sock.ev.removeAllListeners(); } catch {}
+  try { sock.ws?.close(); } catch {}
+  try { sock.end?.(new Error('replaced')); } catch {}
+  try { sock.msgRetryCounterCache?.close(); } catch {}
 }
 
 const logger = pino({ level: "silent" });
@@ -63,6 +69,7 @@ export async function startSubBot(msg, client, caption = '', isCode = false, pho
   const version = await getVersion();
   let saveCredsTimer = null;
   const saveCreds = () => { clearTimeout(saveCredsTimer); saveCredsTimer = setTimeout(saveCredsDB, 2000); };
+  const msgRetryCounterCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, useClones: false });
   const msgStore = new Map();
   const msgLimit = 500;
   console.info = () => {};
@@ -83,10 +90,11 @@ export async function startSubBot(msg, client, caption = '', isCode = false, pho
     transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
     emitOwnEvents: false,
     msgRetryCounterCache,
-    userDevicesCache,
+    cachedGroupMetadata: async (jid) => getCachedMeta(jid) ?? undefined,
     getMessage: async (key) => msgStore.get(key.remoteJid + ':' + key.id),
   });
   patchGroupMetadata(socks);
+  socks.msgRetryCounterCache = msgRetryCounterCache;
   socks.isCommand = isCommand;
   socks.senderId = senderId;
   socks.chatId = chatId;
