@@ -8,10 +8,7 @@ import { getCachedMeta, setCachedMeta } from '#serialize';
 import db from '#db';
 
 export default async (sock, msg) => {
-  if (msg.fromMe && !msg.key.participant && msg.isBot) return;  
   const sender = msg.sender;
-  let body = msg.body || '';
-  
   const from = msg.key.remoteJid;
   const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
   const chat = db.getChat(msg.chat);
@@ -80,14 +77,7 @@ export default async (sock, msg) => {
 
   const botprimaryId = chat?.primaryBot;
   if (!botprimaryId || botprimaryId === botJid) {
-    for (const p of (global.cmdsExecute ?? [])) {
-      if (p.type !== 'before') continue;
-      try {
-        if (await p.fn({ msg, sock, match, groupMetadata, participants, isAdmins, isBotAdmins, isOwner, __dirname: p.dirname })) continue;
-      } catch (e) {
-        console.error(chalk.gray(`[ ✿ ] Error before-plugin ${p.key}: ${e.message}`));
-      }
-    }
+    await Promise.allSettled((global.cmdsExecute ?? []).filter(p => p.type === 'before').map(p => p.fn({ msg, sock, match, groupMetadata, participants, isAdmins, isBotAdmins, isOwner, __dirname: p.dirname }).catch(e => console.error(chalk.gray(`[ ✿ ] Error before-plugin ${p.key}: ${e.message}`)))));
   }
 
   if (!match) return;
@@ -98,9 +88,7 @@ export default async (sock, msg) => {
   let text = args.join(' ');
   if (!command) return;
 
-  const chatData = db.getChat(from);
-  const consolePrimary = chatData.primaryBot;
-  if (!consolePrimary || consolePrimary === botJid) {
+  if (!botprimaryId || botprimaryId === botJid) {
     console.log(chalk.bold.blue(`╭────────────────────────────···\n│ ${chalk.cyan('Bot')}: ${gradient('lime', 'green')(botJid)}\n│ ${chalk.bold.yellow('Fecha')}: ${gradient('orange', 'yellow')(moment().format('DD/MM/YY HH:mm:ss'))}\n│ ${chalk.bold.blueBright('Usuario')}: ${gradient('cyan', 'blue')(pushname)}\n│ ${chalk.bold.magentaBright('Remitente')}: ${gradient('deepskyblue', 'darkorchid')(sender)}\n${msg.isGroup ? '│' + chalk.bold.green(' Grupo') + ': ' + gradient('green', 'lime')(groupName) : '│' + chalk.bold.green(' Privado') + ': ' + gradient('pink', 'magenta')('Chat Privado')}\n${'│' + chalk.bold.magenta(' ID') + ': ' + gradient('violet', 'midnightblue')(msg.isGroup ? from : 'Chat Privado')}\n│ ${chalk.bold.cyanBright('Comando usado')}: ${chalk.gray(command ? command : 'No Command')}\n╰────────────────────────────···\n`));
   }
 
@@ -145,8 +133,6 @@ export default async (sock, msg) => {
     return;
   }
 
-  if (!users.stats) users.stats = {};
-  if (!users.stats[today]) users.stats[today] = { msgs: 0, cmds: 0 };
   if (chat.adminonly && !isAdmins) return;
   const cmdData = global.comandos.get(command);
   if (!cmdData) {
