@@ -9,7 +9,7 @@ import cfonts from "cfonts";
 import fs from "fs";
 import path from "path";
 import readlineSync from "readline-sync";
-import { smsg, getCachedMeta, setCachedMeta } from "#serialize";
+import { smsg, getCachedMeta, setCachedMeta, deleteCachedMeta, patchGroupMetadata } from "#serialize";
 import cmdsLoader from '#system/cmdsLoader';
 import "#system/database";
 import { startSubBot } from './cmds/socket/subs.js';
@@ -143,6 +143,27 @@ let reconexion = 0;
 let botReady = false;
 let isRestarting = false;
 const retriesLimit = 15;
+function remove(sock) {
+  if (!sock) return;
+  try { sock.ev.removeAllListeners(); } catch {}
+  try { sock.ws?.close(); } catch {}
+  try { sock.end?.(new Error('replaced')); } catch {}
+}
+
+const logger = pino({ level: "silent" });
+const versionCache = { value: null, expiresAt: 0 };
+async function getVersion() {
+  if (versionCache.value && Date.now() < versionCache.expiresAt) return versionCache.value;
+  try {
+    const latest = await fetchLatestBaileysVersion();
+    versionCache.value = latest.version;
+    versionCache.expiresAt = Date.now() + 60 * 60 * 1000;
+  } catch (e) {
+    if (!versionCache.value) versionCache.value = [2, 3000, 1033105955];
+  }
+  return versionCache.value;
+}
+
 async function warmupGroups(sock) {
   try {
     const allChats = db.getChat()
@@ -169,25 +190,32 @@ export async function startBot() {
   isRestarting = true;
   bootTime = Date.now();
   const { state, saveCreds: saveCredsDB } = await useMultiFileAuthState('./Sessions/Owner');
+  const version = await getVersion();
   let saveCredsTimer = null;
   const saveCreds = () => { clearTimeout(saveCredsTimer); saveCredsTimer = setTimeout(saveCredsDB, 2000); };
   console.info = () => {};
   console.debug = () => {};
   const sock = makeWASocket({
-    version: [2, 3000, 1044006379],
-    logger: pino({ level: 'silent' }),
+    version,
+    logger,
     browser: Browsers.macOS('Chrome'),
     printQRInTerminal: false,
-    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
+    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
     markOnlineOnConnect: false,
-    syncFullHistory: false,
-    generateHighQualityLinkPreview: true,
+    syncFullHistory: true,
+    shouldSyncHistoryMessage: () => true,
+    fireInitQueries: false,
+    generateHighQualityLinkPreview: false,
     shouldIgnoreJid: (jid) => jid.endsWith('@broadcast'),
-    keepAliveIntervalMs: 25_000,
+    keepAliveIntervalMs: 30000,
+    connectTimeoutMs: 20000,
+    transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
+    emitOwnEvents: false,
     getMessage: async (key) => msgStore.get(key.remoteJid + ':' + key.id),
   });
 
   global.sock = sock;
+  patchGroupMetadata(sock);
   sock.ev.on("creds.update", saveCreds);
   sock.sendText = (jid, text, quoted = "", options) => sock.sendMessage(jid, { text, ...options }, { quoted });
   sock.decodeJid = (jid) => {
@@ -233,7 +261,8 @@ export async function startBot() {
       }
     }
   });
-
+  sock.ev.on("group-participants.update", ({ id }) => { deleteCachedMeta(id); });
+  sock.ev.on("groups.update", (updates) => { for (const update of updates) deleteCachedMeta(update.id); });
   try { await events(sock, null); } catch (err) { console.log(chalk.gray(`[ EVENT ERROR ] → ${err}`)); }
 
   sock.ev.on("connection.update", async (update) => {
@@ -256,11 +285,8 @@ export async function startBot() {
       }
     }
     if (isNewLogin) log.info("Nuevo dispositivo detectado");
-    if (receivedPendingNotifications === true) {
-      log.warn("Por favor espere aproximadamente 1 minuto...");
-      sock.ev.flush();
-    }
     if (connection === "close") {
+      remove(sock);
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
       if ([DisconnectReason.loggedOut, DisconnectReason.forbidden, DisconnectReason.multideviceMismatch].includes(reason)) {
         log.warn(`Principal desvinculado (${reason}) — limpiando sesión y reiniciando...`);
@@ -304,6 +330,21 @@ cleanCache();
 (async () => {
   await initDB();
   await cmdsLoader();
-  loadBots();
   await startBot();
+  await loadBots();
 })();
+
+function onUncaughtException(e) {
+  log.error(`ERROR → ${e?.stack || e?.message || e}`);
+}
+function onUnhandledRejection(reason) {
+  if (reason instanceof SyntaxError) {
+    process.off('uncaughtException', onUncaughtException);
+    process.off('unhandledRejection', onUnhandledRejection);
+    process.nextTick(() => { throw reason; });
+    return;
+  }
+  log.error(`RECHAZO → ${reason?.stack || reason?.message || reason}`);
+}
+process.on('uncaughtException', onUncaughtException);
+process.on('unhandledRejection', onUnhandledRejection);
