@@ -29,6 +29,20 @@ function getClient(client) {
   return global.conns?.find((c) => c?.user?.id?.split(':')[0] === userId) || client;
 }
 
+const logger = pino({ level: "silent" });
+const versionCache = { value: null, expiresAt: 0 };
+async function getVersion() {
+  if (versionCache.value && Date.now() < versionCache.expiresAt) return versionCache.value;
+  try {
+    const latest = await fetchLatestBaileysVersion();
+    versionCache.value = latest.version;
+    versionCache.expiresAt = Date.now() + 60 * 60 * 1000;
+  } catch (e) {
+    if (!versionCache.value) versionCache.value = [2, 3000, 1033105955];
+  }
+  return versionCache.value;
+}
+
 function normalizePhone(input) {
   let s = String(input).replace(/\D/g, '');
   if (!s) return '';
@@ -46,22 +60,28 @@ export async function startSubBot(msg, client, caption = '', isCode = false, pho
   const sessionFolder = path.join(subsPath, id);
   const senderId = msg?.sender;
   const { state, saveCreds: saveCredsDB } = await useMultiFileAuthState(sessionFolder);
+  const version = await getVersion();
   let saveCredsTimer = null;
   const saveCreds = () => { clearTimeout(saveCredsTimer); saveCredsTimer = setTimeout(saveCredsDB, 2000); };
   const msgStore = new Map();
   const msgLimit = 500;
   console.info = () => {};
   const socks = makeWASocket({
-    version: [2, 3000, 1044006379],
-    logger: pino({ level: 'silent' }),
+    version,
+    logger,
     printQRInTerminal: false,
     browser: Browsers.windows('Chrome'),
-    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
-    shouldIgnoreJid: (jid) => jid.endsWith('@broadcast'),
-    markOnlineOnConnect: true,
-    generateHighQualityLinkPreview: true,
+    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
+    markOnlineOnConnect: false,
     syncFullHistory: false,
-    keepAliveIntervalMs: 30_000,
+    shouldSyncHistoryMessage: () => false,
+    fireInitQueries: false,
+    generateHighQualityLinkPreview: false,
+    shouldIgnoreJid: (jid) => jid.endsWith('@broadcast'),
+    keepAliveIntervalMs: 30000,
+    connectTimeoutMs: 20000,
+    transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
+    emitOwnEvents: false,
     msgRetryCounterCache,
     userDevicesCache,
     getMessage: async (key) => msgStore.get(key.remoteJid + ':' + key.id),
@@ -129,6 +149,7 @@ export async function startSubBot(msg, client, caption = '', isCode = false, pho
     if (connection === 'close') {
       const botId = socks.userId || id;
       const reason = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.reason || 0;
+      remove(socks);
       const intentos = reintentos[botId] || 0;
       reintentos[botId] = intentos + 1;
       if ([401, 403].includes(reason)) {
