@@ -3,7 +3,7 @@ import moment from 'moment';
 import chalk from 'chalk';
 import fs from "fs";
 import path from 'path';
-import { getCachedMeta, setCachedMeta } from '#serialize';
+import { getCachedMeta, setCachedMeta, BoundedMap } from '#serialize';
 import db from '#db';
 
 const prefixCache = new BoundedMap(300, 0);
