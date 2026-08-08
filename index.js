@@ -261,8 +261,8 @@ export async function startBot() {
       }
     }
   });
-  sock.ev.on("group-participants.update", ({ id }) => { deleteCachedMeta(id); });
-  sock.ev.on("groups.update", (updates) => { for (const update of updates) deleteCachedMeta(update.id); });
+  //sock.ev.on("group-participants.update", ({ id }) => { deleteCachedMeta(id); });
+  //sock.ev.on("groups.update", (updates) => { for (const update of updates) deleteCachedMeta(update.id); });
   try { await events(sock, null); } catch (err) { console.log(chalk.gray(`[ EVENT ERROR ] → ${err}`)); }
 
   sock.ev.on("connection.update", async (update) => {
