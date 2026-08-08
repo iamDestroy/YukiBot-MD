@@ -178,7 +178,7 @@ function patchGroupMetadata(sock) {
   };
 }
 
-export { normalizeJid, resolveParticipantJid, resolveJidSync, patchGroupMetadata, getCachedMeta, setCachedMeta, deleteCachedMeta };
+export { normalizeJid, resolveParticipantJid, resolveJidSync, patchGroupMetadata, getCachedMeta, setCachedMeta, deleteCachedMeta, BoundedMap };
 
 export async function getBuffer(url, options = {}) {
   try {
