@@ -202,8 +202,8 @@ export async function startBot() {
     printQRInTerminal: false,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
     markOnlineOnConnect: false,
-    syncFullHistory: true,
-    shouldSyncHistoryMessage: () => true,
+    syncFullHistory: false,
+    shouldSyncHistoryMessage: () => false,
     fireInitQueries: false,
     generateHighQualityLinkPreview: false,
     shouldIgnoreJid: (jid) => jid.endsWith('@broadcast'),
@@ -261,8 +261,8 @@ export async function startBot() {
       }
     }
   });
-  //sock.ev.on("group-participants.update", ({ id }) => { deleteCachedMeta(id); });
-  //sock.ev.on("groups.update", (updates) => { for (const update of updates) deleteCachedMeta(update.id); });
+  sock.ev.on("group-participants.update", ({ id }) => { deleteCachedMeta(id); });
+  sock.ev.on("groups.update", (updates) => { for (const update of updates) deleteCachedMeta(update.id); });
   try { await events(sock, null); } catch (err) { console.log(chalk.gray(`[ EVENT ERROR ] → ${err}`)); }
 
   sock.ev.on("connection.update", async (update) => {
@@ -285,6 +285,10 @@ export async function startBot() {
       }
     }
     if (isNewLogin) log.info("Nuevo dispositivo detectado");
+    if (receivedPendingNotifications === true) {
+      log.warn("Por favor espere aproximadamente 1 minuto...");
+      sock.ev.flush();
+    }
     if (connection === "close") {
       remove(sock);
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
