@@ -210,7 +210,11 @@ export function getUser(id, opt = {}) {
       const allowedCols = ['exp', 'level', 'usedcommands', 'name'];
       if (!allowedCols.includes(orderBy)) throw new Error('Columna no permitida');
       let q = `SELECT * FROM users ORDER BY ${orderBy} ${desc ? 'DESC' : 'ASC'}`;
-      if (limit) q += ` LIMIT ${limit}`;
+      const safeLimit = limit ? parseInt(limit, 10) : null;
+      if (safeLimit && Number.isInteger(safeLimit) && safeLimit > 0) {
+        q += ' LIMIT ?';
+        return stmt(q).all(safeLimit);
+      }
       return stmt(q).all();
     }
     return stmt('SELECT * FROM users').all();
