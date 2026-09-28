@@ -31,7 +31,7 @@
     "@vitalets/google-translate-api": "latest",
     "aptoide-scraper": "github:DIEGO-OFC/dv-aptoide-scraper",
     "axios": "^0.24.0",
-    "baileys": "github:this-xys/baileys",
+    "baileys": "github:this-xys/bails",
     "cfonts": "^3.3.0",
     "chalk": "^4.1.2",
     "cheerio": "npm:cheerio@1.0.0-rc.12",
