@@ -44,7 +44,8 @@ export default async (sock, msg) => {
         const jid = resolveEventParticipant(p, sock);
         if (!jid) continue;
         const phone = jid.split('@')[0];
-        const pp = await sock.profilePictureUrl(jid, 'image').catch(() => 'https://files.yuki-wabot.my.id/cdn/2PVh.jpeg');
+        const needsPhoto = metadata && (!primaryBotId || primaryBotId === botId) && ((anu.action === 'add' && chat.welcome) || (['remove', 'leave'].includes(anu.action) && chat.goodbye));
+        const pp = needsPhoto ? await sock.profilePictureUrl(jid, 'image').catch(() => 'https://files.yuki-wabot.my.id/cdn/2PVh.jpeg') : null;
         if (anu.action === 'add' && chat?.welcome && (!primaryBotId || primaryBotId === botId)) {
           if (!metadata) continue;
           let caption;
