@@ -15,6 +15,8 @@ import "#system/database";
 import { startSubBot } from './cmds/socket/subs.js';
 import db from '#db';
 import NodeCache from "node-cache";
+import { createSignalCache } from '#core/signal-cache';
+import { beginMessage, instrumentSocket } from '#core/latency';
 
 const log = {
   info: (msg) => console.log(chalk.bgBlue.white.bold(`INFO`), chalk.white(msg)),
@@ -173,14 +175,9 @@ async function warmupGroups(sock) {
     if (!chatIds.length) return
     console.log(chalk.gray(`[ ✿ ] Precargando metadata de ${chatIds.length} grupos...`))
     const t = Date.now()
-    const batches = []
-    for (let i = 0; i < chatIds.length; i += 10) {
-      batches.push(chatIds.slice(i, i + 10))
+    for (let i = 0; i < chatIds.length; i += 4) {
+      await Promise.allSettled(chatIds.slice(i, i + 4).map(id => sock.groupMetadata(id)))
     }
-    await Promise.allSettled(batches.map(batch => Promise.allSettled(batch.map(async id => {
-    try {
-    const meta = await sock.groupMetadata(id)
-    if (meta) setCachedMeta(id, meta) } catch {}}))))
     console.log(chalk.gray(`[ ✿ ] Warmup completado en ${Date.now() - t}ms`))
   } catch (e) {
     console.log(chalk.gray(`[ ✿ ] warmupGroups → ${e?.message || e}`))
@@ -203,7 +200,7 @@ export async function startBot() {
     logger,
     browser: Browsers.macOS('Chrome'),
     printQRInTerminal: false,
-    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
+    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger, createSignalCache()) },
     markOnlineOnConnect: false,
     syncFullHistory: false,
     shouldSyncHistoryMessage: () => false,
@@ -215,11 +212,12 @@ export async function startBot() {
     transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
     emitOwnEvents: false,
     msgRetryCounterCache,
-    cachedGroupMetadata: async (jid) => getCachedMeta(jid) ?? undefined,
+    cachedGroupMetadata: async (jid) => getCachedMeta(jid) ?? await sock.getCachedGroupMetadata?.(jid),
     getMessage: async (key) => msgStore.get(key.remoteJid + ':' + key.id),
   });
 
   global.sock = sock;
+  instrumentSocket(sock);
   patchGroupMetadata(sock);
   sock.msgRetryCounterCache = msgRetryCounterCache;
   sock.ev.on("creds.update", saveCreds);
@@ -251,24 +249,25 @@ export async function startBot() {
     if (!botReady) return;
     if (type !== 'notify') return;
     for (const msg of messages) {
+      if (msg?.message) beginMessage(msg);
       if (msg?.message && msg?.key?.id) {
         const sid = msg.key.remoteJid + ':' + msg.key.id;
         msgStore.set(sid, msg.message);
         if (msgStore.size > msgLimit) msgStore.delete(msgStore.keys().next().value);
       }
-      try {
-        if (!msg?.message || msg.key?.remoteJid === "status@broadcast") continue;
-        if ((msg.messageTimestamp * 1000) < bootTime - 15_000) continue;
-        if (msg.message.ephemeralMessage) msg.message = msg.message.ephemeralMessage.message;
-        const m = await smsg(sock, msg);
-        if (typeof main === 'function') main(sock, m, messages).catch((err) => console.error('[ ✿  ]  Main Owner »', err?.message));
-      } catch (err) {
-        console.error('Error:', err);
-      }
+      void (async () => {
+        try {
+          if (!msg?.message || msg.key?.remoteJid === "status@broadcast") return;
+          if ((msg.messageTimestamp * 1000) < bootTime - 15_000) return;
+          if (msg.message.ephemeralMessage) msg.message = msg.message.ephemeralMessage.message;
+          const m = await smsg(sock, msg);
+          if (typeof main === 'function') main(sock, m, messages).catch((err) => console.error('[ ✿  ]  Main Owner »', err?.message));
+        } catch (err) {
+          console.error('Error:', err);
+        }
+      })();
     }
   });
-  sock.ev.on("group-participants.update", ({ id }) => { deleteCachedMeta(id); });
-  sock.ev.on("groups.update", (updates) => { for (const update of updates) deleteCachedMeta(update.id); });
   try { await events(sock, null); } catch (err) { console.log(chalk.gray(`[ EVENT ERROR ] → ${err}`)); }
 
   sock.ev.on("connection.update", async (update) => {
