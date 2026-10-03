@@ -13,6 +13,7 @@ global.plugins = global.plugins ?? {};
 global.cmdsExecute = global.cmdsExecute ?? [];
 
 function registerModule(filePath, mod) {
+  global.commandRevision = (global.commandRevision || 0) + 1;
   const key = path.relative(commandsFolder, filePath).replace(/\\/g, '/').replace(/\.js$/, '');
   for (const [cmd, data] of global.comandos)
     if (data.pluginKey === key) global.comandos.delete(cmd);
@@ -83,6 +84,7 @@ async function scan(dir) {
 async function reloadFile(filePath) {
   if (!filePath.endsWith('.js')) return;
   if (!fs.existsSync(filePath)) {
+    global.commandRevision = (global.commandRevision || 0) + 1;
     pluginCache.delete(filePath);
     const key = path.relative(commandsFolder, filePath).replace(/\\/g, '/').replace(/\.js$/, '');
     for (const [cmd, data] of global.comandos)
