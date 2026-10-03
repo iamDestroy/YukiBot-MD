@@ -9,6 +9,8 @@ import path from 'path';
 import chalk from 'chalk';
 import { smsg, patchGroupMetadata, getCachedMeta } from '#serialize';
 import db from '#db';
+import { createSignalCache } from '#core/signal-cache';
+import { beginMessage, instrumentSocket } from '#core/latency';
 
 if (!global.conns) global.conns = [];
 let reintentos = {};
@@ -78,7 +80,7 @@ export async function startSubBot(msg, client, caption = '', isCode = false, pho
     logger,
     printQRInTerminal: false,
     browser: Browsers.windows('Chrome'),
-    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
+    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger, createSignalCache()) },
     markOnlineOnConnect: false,
     syncFullHistory: false,
     shouldSyncHistoryMessage: () => false,
@@ -90,10 +92,11 @@ export async function startSubBot(msg, client, caption = '', isCode = false, pho
     transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
     emitOwnEvents: false,
     msgRetryCounterCache,
-    cachedGroupMetadata: async (jid) => getCachedMeta(jid) ?? undefined,
+    cachedGroupMetadata: async (jid) => getCachedMeta(jid) ?? await socks.getCachedGroupMetadata?.(jid),
     getMessage: async (key) => msgStore.get(key.remoteJid + ':' + key.id),
   });
   patchGroupMetadata(socks);
+  instrumentSocket(socks);
   socks.msgRetryCounterCache = msgRetryCounterCache;
   socks.isCommand = isCommand;
   socks.senderId = senderId;
@@ -116,18 +119,21 @@ export async function startSubBot(msg, client, caption = '', isCode = false, pho
     if (!botReady) return;
     if (type !== 'notify') return;
     for (const raw of messages) {
+      if (raw?.message) beginMessage(raw);
       if (raw?.message && raw?.key?.id) {
         const sid = raw.key.remoteJid + ':' + raw.key.id;
         msgStore.set(sid, raw.message);
         if (msgStore.size > msgLimit) msgStore.delete(msgStore.keys().next().value);
       }
-      try {
-        if (!raw?.message || raw.key?.remoteJid === 'status@broadcast') continue;
-        if ((raw.messageTimestamp * 1000) < bootTime - 15_000) continue;
-        if (raw.message.ephemeralMessage) raw.message = raw.message.ephemeralMessage.message;
-        const m = await smsg(socks, raw);
-        if (typeof main === 'function') main(socks, m, messages).catch((err) => console.error('[ ✿  ]  Main Sub »', err?.message || err));
-      } catch (e) { console.log(e); }
+      void (async () => {
+        try {
+          if (!raw?.message || raw.key?.remoteJid === 'status@broadcast') return;
+          if ((raw.messageTimestamp * 1000) < bootTime - 15_000) return;
+          if (raw.message.ephemeralMessage) raw.message = raw.message.ephemeralMessage.message;
+          const m = await smsg(socks, raw);
+          if (typeof main === 'function') main(socks, m, messages).catch((err) => console.error('[ ✿  ]  Main Sub »', err?.message || err));
+        } catch (e) { console.log(e); }
+      })();
     }
   });
   try { await events(socks, msg); } catch (err) { console.log(chalk.gray(`[ EVENT ERROR  ]  → ${err}`)); }
