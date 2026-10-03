@@ -28,7 +28,7 @@ export default {
       const targetId = msg.mentionedJid?.[0] || msg.quoted?.sender || null;
       if (!targetId) return msg.reply(`❀ Debes mencionar o citar el mensaje del destinatario.`);
       let sender = db.getChatUser(msg.chat, msg.sender);
-      let target = db.getChatUser(msg.chat, targetId);
+      let target = targetId === msg.sender ? sender : db.getChatUser(msg.chat, targetId);
       if (!target) {
       return msg.reply(`「✎」 El usuario mencionado no está registrado en el bot.`);
       }
