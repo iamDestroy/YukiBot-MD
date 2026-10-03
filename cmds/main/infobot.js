@@ -3,7 +3,7 @@ import os from 'os';
 import { prepareWAMessageMedia } from 'baileys';
 import db from '#db';
 
-export function getMemoryStats({
+function getMemoryStats({
   rssBytes = process.memoryUsage().rss,
   systemTotalBytes = os.totalmem(),
   constrainedBytes = process.constrainedMemory?.() || 0
