@@ -81,9 +81,7 @@ export default {
 ❒ *RAM Utilizada ›* ${ram}
 ❒ *Activo desde ›* ${formattedUptimeDate}
 ❒ *Sistema Activo ›* ${sistemaUptime}
-❒ *${desar === 'Hombre' ? 'Dueño' : desar === 'Mujer' ? 'Dueña' : 'Dueño(a)'} ›* ${owner ? (!isNaN(owner.replace(/@s\.whatsapp\.net$/, '')) ? `@${owner.split('@')[0]}` : owner) : "Oculto por privacidad"}
-
-> \`Enlace:\` ${link}`.trim();
+❒ *${desar === 'Hombre' ? 'Dueño' : desar === 'Mujer' ? 'Dueña' : 'Dueño(a)'} ›* ${owner ? (!isNaN(owner.replace(/@s\.whatsapp\.net$/, '')) ? `@${owner.split('@')[0]}` : owner) : "Oculto por privacidad"}`.trim();
 
       await sock.sendMessage(msg.chat, banner.includes('.mp4') || banner.includes('.webm') ? {
         video: { url: banner },
