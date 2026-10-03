@@ -1,10 +1,8 @@
-import ws from 'ws';
 import moment from 'moment';
 import chalk from 'chalk';
-import fs from "fs";
-import path from 'path';
 import { getCachedMeta, setCachedMeta, BoundedMap } from '#serialize';
 import db from '#db';
+import { statsDay, markCommand } from '#core/latency';
 
 const prefixCache = new BoundedMap(300, 0);
 function getBotPrefixRegex(botJid, settings) {
@@ -32,12 +30,27 @@ function getBotPrefixRegex(botJid, settings) {
   return entry;
 }
 
-let customPrefixCache = { size: -1, list: [] };
+let customPrefixCache = { commands: null, revision: -1, size: -1, list: [] };
 function getCustomPrefixCmds() {
-  if (customPrefixCache.size !== global.comandos.size) {
-    customPrefixCache = { size: global.comandos.size, list: [...global.comandos].filter(([, data]) => data.customPrefix) };
+  if (customPrefixCache.commands !== global.comandos || customPrefixCache.revision !== global.commandRevision || customPrefixCache.size !== global.comandos.size) {
+    customPrefixCache = { commands: global.comandos, revision: global.commandRevision, size: global.comandos.size, list: [...global.comandos].filter(([, data]) => data.customPrefix) };
   }
   return customPrefixCache.list;
+}
+
+const adminCache = new WeakMap();
+function getAdmins(metadata, participants) {
+  if (!metadata) return new Set();
+  const cached = adminCache.get(metadata);
+  if (cached?.participants === participants) return cached.admins;
+  const admins = new Set();
+  for (const participant of participants) {
+    if (participant.admin !== 'admin' && participant.admin !== 'superadmin') continue;
+    for (const jid of [participant.id, participant.lid, participant.phoneNumber])
+      if (jid) admins.add(jid.split('@')[0]);
+  }
+  adminCache.set(metadata, { participants, admins });
+  return admins;
 }
 
 function getAllSessionBots() {
@@ -53,8 +66,7 @@ export default async (sock, msg) => {
   const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
   const chat = db.getChat(msg.chat);
   const settings = db.getSettings(botJid);
-  const user = db.getUser(sender);
-  const users = db.getChatUser(msg.chat, sender);
+  db.getUser(sender);
   const pushname = msg.pushName || 'Sin nombre';
   const isOwner = global.owner.map(num => num + '@s.whatsapp.net').includes(sender);
   const isROwner = [botJid, ...(settings.owner ? [settings.owner] : []), ...global.owner.map(num => num + '@s.whatsapp.net')].includes(sender);
@@ -70,7 +82,7 @@ export default async (sock, msg) => {
     groupName = groupMetadata?.subject || '';
   }
   const participants = groupMetadata?.participants || [];
-  const adminSet = new Set(participants.filter(p => p.admin === 'admin' || p.admin === 'superadmin').flatMap(p => [p.id?.split('@')[0], p.lid?.split('@')[0], p.phoneNumber?.split('@')[0]].filter(Boolean)));
+  const adminSet = getAdmins(groupMetadata, participants);
   const senderBase = sender.split('@')[0];
   const botBase = botJid.split('@')[0];
   const isBotAdmins = msg.isGroup ? adminSet.has(botBase) : false;
@@ -78,11 +90,12 @@ export default async (sock, msg) => {
 
   Promise.allSettled((global.cmdsExecute ?? []).filter(p => p.type === 'all').map(p => p.fn({ msg, sock, groupMetadata, participants, isAdmins, isBotAdmins, isOwner, __dirname: p.dirname }).catch(e => console.error(chalk.gray(`[ ✿ ] Error all-plugin ${p.key}: ${e.message}`)))));
 
-  const today = new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-');
+  const today = statsDay();
+  const users = db.getChatUser(msg.chat, sender);
   if (!users.stats) users.stats = {};
   if (!users.stats[today]) users.stats[today] = { msgs: 0, cmds: 0 };
   users.stats[today].msgs++;
-  db.setChatUser(from, sender, 'stats', users.stats);
+  db.setChatUser(msg.chat, sender, 'stats', users.stats);
 
   const rawBotname = settings.namebot || 'Yuki';
   const { regex: prefix, namebot } = getBotPrefixRegex(botJid, settings);
@@ -114,7 +127,7 @@ export default async (sock, msg) => {
   let text = args.join(' ');
   if (!command) return;
 
-  if (!botprimaryId || botprimaryId === botJid) {
+  if (process.env.BOT_COMMAND_LOG !== '0' && (!botprimaryId || botprimaryId === botJid)) {
     console.log(chalk.bold.blue(`╭────────────────────────────···\n│ ${chalk.cyan('Bot')}: ${chalk.greenBright(botJid)}\n│ ${chalk.bold.yellow('Fecha')}: ${chalk.yellowBright(moment().format('DD/MM/YY HH:mm:ss'))}\n│ ${chalk.bold.blueBright('Usuario')}: ${chalk.blueBright(pushname)}\n│ ${chalk.bold.magentaBright('Remitente')}: ${chalk.magentaBright(sender)}\n${msg.isGroup ? '│' + chalk.bold.green(' Grupo') + ': ' + chalk.greenBright(groupName) : '│' + chalk.bold.green(' Privado') + ': ' + chalk.magentaBright('Chat Privado')}\n${'│' + chalk.bold.magenta(' ID') + ': ' + chalk.blueBright(msg.isGroup ? from : 'Chat Privado')}\n│ ${chalk.bold.cyanBright('Comando usado')}: ${chalk.gray(command ? command : 'No Command')}\n╰────────────────────────────···\n`));
   }
 
@@ -155,22 +168,12 @@ export default async (sock, msg) => {
   if (cmdData.isAdmin && !isAdmins) return sock.reply(msg.chat, '《✧》 Este comando solo puede ser ejecutado por los Administradores del Grupo.', msg);
   if (cmdData.botAdmin && !isBotAdmins) return sock.reply(msg.chat, '《✧》 Este comando solo puede ser ejecutado si el Socket es Administrador del Grupo.', msg);
   try {
-    await sock.sendPresenceUpdate('composing', msg.chat);
-    await sock.readMessages([msg.key]);
-    user.usedcommands = (user.usedcommands || 0) + 1;
-    user.exp = (user.exp || 0) + Math.floor(Math.random() * 100);
-    user.name = msg.pushName;
-    db.setUser(sender, 'usedcommands', user.usedcommands);
-    db.setUser(sender, 'exp', user.exp);
-    db.setUser(sender, 'name', user.name);
-    users.usedTime = new Date();
-    users.lastCmd = Date.now();
-    users.stats[today].cmds++;
-    db.setChatUser(msg.chat, sender, 'usedTime', users.usedTime);
-    db.setChatUser(msg.chat, sender, 'lastCmd', users.lastCmd);
-    db.setChatUser(msg.chat, sender, 'stats', users.stats);
-    settings.commandsejecut = (settings.commandsejecut || 0) + 1;
-    db.setSettings(botJid, 'commandsejecut', settings.commandsejecut);
+    sock.sendPresenceUpdate('composing', msg.chat).catch(error =>
+      console.error('[ ✿ ] Error de presencia:', error?.message || error));
+    sock.readMessages([msg.key]).catch(error =>
+      console.error('[ ✿ ] Error marcando lectura:', error?.message || error));
+    db.recordCommand(msg.chat, sender, botJid, { name: msg.pushName, exp: Math.floor(Math.random() * 100), now: Date.now(), day: today });
+    markCommand(msg);
     await cmdData.run({ msg, sock, args, usedPrefix, command, text, groupMetadata, participants, isAdmins, isBotAdmins, isOwner, __dirname: global.plugins[cmdData.pluginKey]?.dirname });
   } catch (error) {
     await sock.sendMessage(msg.chat, { text: `《✧》 Error al ejecutar el comando ${command}.\n\n${error}` }, { quoted: msg });
