@@ -83,44 +83,7 @@ export default {
 ❒ *Sistema Activo ›* ${sistemaUptime}
 ❒ *${desar === 'Hombre' ? 'Dueño' : desar === 'Mujer' ? 'Dueña' : 'Dueño(a)'} ›* ${owner ? (!isNaN(owner.replace(/@s\.whatsapp\.net$/, '')) ? `@${owner.split('@')[0]}` : owner) : "Oculto por privacidad"}`.trim();
 
-      await sock.sendMessage(msg.chat, banner.includes('.mp4') || banner.includes('.webm') ? {
-        video: { url: banner },
-        gifPlayback: true,
-        caption: message.trim(),
-        contextInfo: {
-          mentionedJid: [owner, msg.sender],
-          isForwarded: true,
-          forwardedNewsletterMessageInfo: {
-            newsletterJid: canalId,
-            serverMessageId: '0',
-            newsletterName: canalName
-          }
-        }
-      } : {
-        text: message.trim(),
-        linkPreview: link && banner ? (await prepareWAMessageMedia({
-          image: { url: banner }
-        }, {
-          upload: sock.waUploadToServer,
-          mediaTypeOverride: 'thumbnail-link'
-        }).then(({ imageMessage }) => ({
-          'canonical-url': link,
-          'matched-text': link,
-          title: botname,
-          description: `${namebot}, mᥲძᥱ ᥕі𝗍һ ᑲᥡ ⁱᵃᵐ|𝔇ĕ𝐬†𝓻⊙γ𒆜`,
-          jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined,
-          highQualityThumbnail: imageMessage || undefined
-        }))) : undefined,
-        contextInfo: {
-          mentionedJid: [owner, msg.sender],
-          isForwarded: true,
-          forwardedNewsletterMessageInfo: {
-            newsletterJid: canalId,
-            serverMessageId: '0',
-            newsletterName: canalName
-          }
-        }
-      }, { quoted: msg });
+      await sock.sendMessage(msg.chat, banner.includes('.mp4') || banner.includes('.webm') ? { video: { url: banner }, gifPlayback: true, caption: message.trim(), contextInfo: { mentionedJid: [owner, msg.sender], isForwarded: true, forwardedNewsletterMessageInfo: { newsletterJid: canalId, serverMessageId: '0', newsletterName: canalName }}} : { text: message.trim(), linkPreview: link && banner ? (await prepareWAMessageMedia({ image: { url: banner }}, { upload: sock.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }).then(({ imageMessage }) => ({ 'canonical-url': link, 'matched-text': link, title: botname, description: `${namebot}, mᥲძᥱ ᥕі𝗍һ ᑲᥡ ⁱᵃᵐ|𝔇ĕ𝐬†𝓻⊙γ𒆜`, jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined, highQualityThumbnail: imageMessage || undefined }))) : undefined, contextInfo: { mentionedJid: [owner, msg.sender], isForwarded: true, forwardedNewsletterMessageInfo: { newsletterJid: canalId, serverMessageId: '0', newsletterName: canalName }}}, { quoted: msg });
     } catch (e) {
       return msg.reply(`> An unexpected error occurred while executing command *${usedPrefix + command}*. Please try again or contact support if the issue persists.\n> [Error: *${e.message}*]`);
     }
