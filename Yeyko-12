@@ -1,0 +1,59 @@
+{
+  "name": "yukiwabot",
+  "version": "3.2",
+  "description": "WhatsApp multi Device, updated with better performance",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --write .",
+    "start": "node index.js"
+  },
+  "imports": {
+    "#serialize": "./core/serialize.js",
+    "#main": "./main.js",
+    "#core/*": "./core/*.js",
+    "#system/*": "./core/system/*.js",
+    "#events": "./cmds/events.js",
+    "#db": "./core/system/database.js"
+  },
+  "keywords": [
+    "whatsapp-bot",
+    "baileys-md",
+    "multi-device"
+  ],
+  "author": "iamDestroy",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13.0",
+    "npm": ">=10.9.4"
+  },
+  "dependencies": {
+    "@vitalets/google-translate-api": "latest",
+    "aptoide-scraper": "github:DIEGO-OFC/dv-aptoide-scraper",
+    "axios": "^0.24.0",
+    "baileys": "github:this-xys/baileys",
+    "cfonts": "^3.3.0",
+    "chalk": "^4.1.2",
+    "cheerio": "npm:cheerio@1.0.0-rc.12",
+    "file-type": "^16.5.4",
+    "fluent-ffmpeg": "^2.1.2",
+    "form-data": "^4.0.0",
+    "gradient-string": "^2.0.2",
+    "grapheme-splitter": "^1.0.4",
+    "human-readable": "^0.2.1",
+    "jimp": "latest",
+    "lodash": "latest",
+    "moment": "^2.29.4",
+    "moment-timezone": "^0.5.37",
+    "node-cache": "latest",
+    "node-fetch": "^3.2.10",
+    "node-webpmux": "^3.2.0",
+    "pino": "^8.8.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "readline-sync": "^1.4.10",
+    "syntax-error": "^1.4.0",
+    "ws": "^8.18.3",
+    "yt-search": "^2.10.4"
+  }
+}
